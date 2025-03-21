@@ -97,7 +97,7 @@ print(f"\n전체 데이터 분할 결과: Train {len(train_dataset)}개, Test {l
 
 # JSON 파일로 저장
 with open('/workspace/test/test.json', 'w', encoding='utf-8') as f:
-    json.dump(test_data, f, indent=4)
+    json.dump(test_dataset, f, indent=4)
 
 # 허깅페이스 모델 ID
 model_id = "meta-llama/Llama-3.1-8B" 
