@@ -1,1 +1,30 @@
-nohup: failed to run command './train.sh': No such file or directory
+[2025-03-29 05:43:37,505] [INFO] [real_accelerator.py:219:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+df: /root/.triton/autotune: No such file or directory
+[2025-03-29 05:43:39,197] [WARNING] [runner.py:215:fetch_hostfile] Unable to find hostfile, will proceed with training with local resources only.
+[2025-03-29 05:43:39,198] [INFO] [runner.py:607:main] cmd = /usr/bin/python -u -m deepspeed.launcher.launch --world_info=eyJsb2NhbGhvc3QiOiBbMCwgMV19 --master_addr=127.0.0.1 --master_port=29500 --enable_each_rank_log=None rag_train.py
+[2025-03-29 05:43:40,555] [INFO] [real_accelerator.py:219:get_accelerator] Setting ds_accelerator to cuda (auto detect)
+[2025-03-29 05:43:42,243] [INFO] [launch.py:139:main] 0 NV_LIBNCCL_DEV_PACKAGE=libnccl-dev=2.15.5-1+cuda11.8
+[2025-03-29 05:43:42,243] [INFO] [launch.py:139:main] 0 NV_LIBNCCL_DEV_PACKAGE_VERSION=2.15.5-1
+[2025-03-29 05:43:42,243] [INFO] [launch.py:139:main] 0 NCCL_VERSION=2.15.5-1
+[2025-03-29 05:43:42,243] [INFO] [launch.py:139:main] 0 NV_LIBNCCL_DEV_PACKAGE_NAME=libnccl-dev
+[2025-03-29 05:43:42,243] [INFO] [launch.py:139:main] 0 NV_LIBNCCL_PACKAGE=libnccl2=2.15.5-1+cuda11.8
+[2025-03-29 05:43:42,244] [INFO] [launch.py:139:main] 0 NV_LIBNCCL_PACKAGE_NAME=libnccl2
+[2025-03-29 05:43:42,244] [INFO] [launch.py:139:main] 0 NV_LIBNCCL_PACKAGE_VERSION=2.15.5-1
+[2025-03-29 05:43:42,244] [INFO] [launch.py:146:main] WORLD INFO DICT: {'localhost': [0, 1]}
+[2025-03-29 05:43:42,244] [INFO] [launch.py:152:main] nnodes=1, num_local_procs=2, node_rank=0
+[2025-03-29 05:43:42,244] [INFO] [launch.py:163:main] global_rank_mapping=defaultdict(<class 'list'>, {'localhost': [0, 1]})
+[2025-03-29 05:43:42,245] [INFO] [launch.py:164:main] dist_world_size=2
+[2025-03-29 05:43:42,245] [INFO] [launch.py:168:main] Setting CUDA_VISIBLE_DEVICES=0,1
+[2025-03-29 05:43:42,247] [INFO] [launch.py:256:main] process 1700 spawned with command: ['/usr/bin/python', '-u', 'rag_train.py', '--local_rank=0']
+[2025-03-29 05:43:42,249] [INFO] [launch.py:256:main] process 1701 spawned with command: ['/usr/bin/python', '-u', 'rag_train.py', '--local_rank=1']
+  File "/workspace/test/rag_train.py", line 1
+      File "/workspace/test/rag_train.py", line 1
+    !pip install torch==2.4.0 transformers==4.45.1 datasets==3.0.1 accelerate==0.34.2 trl==0.11.1 peft==0.13.0 deepspeed==0.15.4
+    !pip install torch==2.4.0 transformers==4.45.1 datasets==3.0.1 accelerate==0.34.2 trl==0.11.1 peft==0.13.0 deepspeed==0.15.4
+    ^
+^
+SyntaxError: SyntaxError: invalid syntax
+invalid syntax
+[2025-03-29 05:43:43,250] [INFO] [launch.py:319:sigkill_handler] Killing subprocess 1700
+[2025-03-29 05:43:43,253] [INFO] [launch.py:319:sigkill_handler] Killing subprocess 1701
+[2025-03-29 05:43:43,253] [ERROR] [launch.py:325:sigkill_handler] ['/usr/bin/python', '-u', 'rag_train.py', '--local_rank=1'] exits with return code = 1
