@@ -1,5 +1,4 @@
 !pip install torch==2.4.0 transformers==4.45.1 datasets==3.0.1 accelerate==0.34.2 trl==0.11.1 peft==0.13.0 deepspeed==0.15.4
-# train.py
 
 import os
 import torch
@@ -48,56 +47,96 @@ with open("output.json", "w", encoding="utf-8") as file:
 
 driver.quit()
 
+# 만약 max_seq_length가 전역 변수라면 정의
+max_seq_length = 1024  # 환경에 맞게 수정
+
+# 1. 허깅페이스 허브에서 데이터셋 로드
+dataset = load_dataset("json", data_files="output.json")
+
+# 2. system_message 정의
+system_message = """
+
+주어진 뉴스 기사 데이터를 변환해야 한다. 
+'media_name'과 'title'을 입력으로 사용하고 'content'를 출력으로 사용하라. 
+사용자는 기사 제목을 제공하며, 너는 해당 기사 내용을 요약하여 응답해야 한다.
+다음의 지시사항을 따르십시오.
+
+검색 결과:
+-----
+{search_result}"""
+
+# 3. 원본 데이터의 type별 분포 출력 
+print("원본 데이터의 type 분포:")
+for type_name in set(dataset['type']):
+    print(f"{type_name}: {dataset['type'].count(type_name)}")
+
 # 4. train/test 분할 비율 설정 (0.5면 5:5로 분할)
-test_ratio = 0.5
+test_ratio = 0.4
 
 train_data = []
 test_data = []
 
-import json
-import pandas as pd
-from sklearn.model_selection import train_test_split
+# 5. type별로 순회하면서 train/test 데이터 분할
+for type_name in set(dataset['type']):
+    curr_type_data = [i for i in range(len(dataset)) if dataset[i]['type'] == type_name]
+    test_size = int(len(curr_type_data) * test_ratio)
+    test_data.extend(curr_type_data[:test_size])
+    train_data.extend(curr_type_data[test_size:])
 
-# JSON 파일 읽기
-file_path = "/workspace/test/output.json"
-def load_json(file_path):
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-    return data
+# 6. OpenAI format으로 데이터 변환을 위한 함수 
+def format_data(sample):
+    search_result = "\n-----\n".join([f"문서{idx + 1}: {result}" for idx, result in enumerate(sample["search_result"])])
+    return {
+        "messages": [
+            {
+                "role": "system",
+                "content": system_message.format(search_result=search_result),
+            },
+            {
+                "role": "user",
+                "content": f"기사 제목: {sample['title']} (출처: {sample['media_name']})",
+            },
+            {
+                "role": "assistant",
+                "content": sample["content"]
+            },
+        ],
+    }
 
-# OpenAI format으로 변환
-def format_openai_data(data):
-    formatted_data = []
-    system_message = "주어진 뉴스 기사 데이터를 변환해야 한다. 'media_name'과 'title'을 입력으로 사용하고 'content'를 출력으로 사용하라. 사용자는 기사 제목을 제공하며, 너는 해당 기사 내용을 요약하여 응답해야 한다."
-    
-    for sample in data:
-        formatted_sample = {
-            "messages": [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": f"기사 제목: {sample['title']} (출처: {sample['media_name']})"},
-                {"role": "assistant", "content": sample["content"]},
-            ]
-        }
-        formatted_data.append(formatted_sample)
-    
-    return formatted_data
-  
-data = load_json(file_path)  
-split_ratio = 0.8  
-split_idx = int(len(data) * split_ratio)
+# 7. 분할된 데이터를 OpenAI format으로 변환
+train_dataset_list = [format_data(dataset[i]) for i in train_data]
+test_dataset_list = [format_data(dataset[i]) for i in test_data]
 
-# 데이터 분할
-train_data = data[:split_idx]
-test_data = data[split_idx:]
+print(f"\n전체 데이터 분할 결과: Train {len(train_dataset_list)}개, Test {len(test_dataset_list)}개")
 
-# openai format으로 변환
-train_dataset = format_openai_data(train_data)
-test_dataset = format_openai_data(test_data)
-print(f"\n전체 데이터 분할 결과: Train {len(train_dataset)}개, Test {len(test_dataset)}개")
+print("\n학습 데이터의 type 분포:")
+for type_name in set(dataset['type']):
+    count = sum(1 for i in train_data if dataset[i]['type'] == type_name)
+    print(f"{type_name}: {count}")
 
-# JSON 파일로 저장
-with open('/workspace/test/test.json', 'w', encoding='utf-8') as f:
-    json.dump(test_dataset, f, indent=4)
+print("\n테스트 데이터의 type 분포:")
+for type_name in set(dataset['type']):
+    count = sum(1 for i in test_data if dataset[i]['type'] == type_name)
+    print(f"{type_name}: {count}")
+
+# 로컬에 저장된 데이터셋이 있으면 불러오고, 없으면 새로 변환 후 저장
+if os.path.exists("train_dataset"):
+    train_dataset = load_from_disk("train_dataset")
+    print("로컬 train_dataset 로드 완료.")
+else:
+    # 리스트 형태에서 다시 Dataset 객체로 변경
+    train_dataset = Dataset.from_list(train_dataset_list)
+    train_dataset.save_to_disk("train_dataset")
+    print("train_dataset을 로컬에 저장함.")
+
+if os.path.exists("test_dataset"):
+    test_dataset = load_from_disk("test_dataset")
+    print("로컬 test_dataset 로드 완료.")
+else:
+    # 리스트 형태에서 다시 Dataset 객체로 변경
+    test_dataset = Dataset.from_list(test_dataset_list)
+    test_dataset.save_to_disk("test_dataset")
+    print("test_dataset을 로컬에 저장함.")
 
 # 허깅페이스 모델 ID
 model_id = "meta-llama/Llama-3.1-8B" 
@@ -146,11 +185,6 @@ args = SFTConfig(
     report_to=None,
     deepspeed="ds_config.json"               # DeepSpeed 설정 파일 지정
 )
-
-# 만약 max_seq_length가 전역 변수라면 정의
-max_seq_length = 1024  # 환경에 맞게 수정
-
-import torch
 
 def collate_fn(batch):
     new_batch = {
@@ -234,7 +268,6 @@ def collate_fn(batch):
     
     return new_batch
 
-
 def main():
     trainer = SFTTrainer(
         model=model,
@@ -242,7 +275,7 @@ def main():
         max_seq_length=max_seq_length,  # 최대 시퀀스 길이 설정
         train_dataset=train_dataset,
         data_collator=collate_fn,
-        peft_config=peft_config,  # peft_config 제거: 전체 모델 파라미터 업데이트 (풀 파인튜닝)
+        peft_config=peft_config,
     )
     
     # 학습 시작 (모델은 자동으로 허브 및 output_dir에 저장됨)
